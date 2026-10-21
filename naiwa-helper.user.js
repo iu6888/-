@@ -477,6 +477,7 @@
   }
 
   function togglePanel() {
+    if (!isGamePage()) return; // 非游戏页不建空面板
     STATE.panel = !STATE.panel;
     if (STATE.panel) buildUI();
     if (ui) ui.host.style.display = STATE.panel ? "" : "none";
@@ -496,7 +497,16 @@
     true
   );
 
+  // 只有真正跑游戏的页面才有引擎。大厅 / 登录页 / 迁移提示页注入进去
+  // 只会留下一个没用的空面板，还挡视线，所以这几类页面直接不启动。
+  // 从大厅点「进入单人模式」是整页导航（/play → 302 → /game），脚本会重新执行。
+  function isGamePage() {
+    try { return /^\/game(\/|$)/.test(location.pathname); } catch (e) { return false; }
+  }
+
   function boot() {
+    if (!isGamePage()) return;
+
     let waited = 0;
     let protoPatched = false;
     let started = false;
@@ -531,8 +541,8 @@
 
       if (waited >= READY_TIMEOUT) {
         clearInterval(timer);
-        console.warn("[奶蛙辅助] 等待 RunnerCore / gameDebug 超时。若页面停在 /login，请先登录再进游戏。");
-        if (STATE.panel && !ui) buildUI();
+        // 不建空面板：面板只有在引擎就绪后才有意义
+        console.warn("[奶蛙辅助] 等待 RunnerCore / gameDebug 超时。游戏可能没加载成功，或被 302 打回了 /login。");
       }
     }, POLL_MS);
   }
